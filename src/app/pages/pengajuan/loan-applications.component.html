@@ -1,0 +1,611 @@
+<div class="layout-container">
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div>
+          <span class="app-name">Clemont Loan Demo</span>
+          <span class="demo-tag">Demo Pelatihan</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar" aria-hidden="true">
+            {{ currentUser()?.fullName ? currentUser()!.fullName.charAt(0) : 'P' }}
+          </div>
+          <div class="user-info">
+            <span class="user-name">{{ currentUser()?.fullName || 'Petugas' }}</span>
+            <span class="user-email">{{ currentUser()?.email || 'staff@clemont.test' }}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="logout-btn"
+          class="btn-logout"
+          (click)="logout()"
+          [disabled]="isLoggingOut()"
+          title="Keluar dari sistem"
+          aria-label="Logout"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span class="logout-text">{{ isLoggingOut() ? 'Keluar...' : 'Keluar' }}</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <div class="page-container">
+      
+      <!-- Feedback Notifications -->
+      @if (successNotification()) {
+        <div class="notification notification-success" role="status" id="success-notification">
+          <div class="notif-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div class="notif-body">
+            <strong>Berhasil!</strong>
+            <p>{{ successNotification() }}</p>
+          </div>
+          <button type="button" class="btn-close-notif" (click)="successNotification.set(null)" aria-label="Tutup notifikasi">×</button>
+        </div>
+      }
+
+      @if (formErrorMessage() && !isCreateOpen()) {
+        <div class="notification notification-error" role="alert" id="form-error-notification">
+          <div class="notif-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div class="notif-body">
+            <strong>Perhatian:</strong>
+            <p>{{ formErrorMessage() }}</p>
+          </div>
+          <button type="button" class="btn-close-notif" (click)="formErrorMessage.set(null)" aria-label="Tutup pesan error">×</button>
+        </div>
+      }
+
+      <!-- Tabel Daftar Pengajuan Section -->
+      <section class="card table-card" aria-labelledby="table-heading">
+        <div class="card-header table-header-flex">
+          <div>
+            <h2 id="table-heading" class="card-title">Daftar Pengajuan Pinjaman</h2>
+            <p class="card-subtitle">Kelola dan pantau pengajuan pinjaman yang tercatat dalam sistem.</p>
+          </div>
+          <button type="button" id="add-loan-btn" class="btn btn-primary add-loan-btn" (click)="openCreate()" aria-haspopup="dialog" aria-controls="create-loan-dialog">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Tambah Pengajuan
+          </button>
+
+          <!-- Filter Pencarian -->
+          <div class="search-box">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              id="search-input"
+              type="text"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="onSearchChange($event)"
+              placeholder="Cari nama atau nomor pengajuan..."
+              class="search-input"
+              aria-label="Cari pengajuan pinjaman"
+            />
+            @if (searchTerm()) {
+              <button
+                type="button"
+                class="search-clear-btn"
+                (click)="onSearchChange('')"
+                aria-label="Bersihkan pencarian"
+              >×</button>
+            }
+          </div>
+        </div>
+
+        @if (detailError()) {
+          <p class="notification notification-error" role="alert">{{ detailError() }}</p>
+        }
+        @if (isLoadingDetail()) {
+          <p role="status" class="text-muted">Memuat rincian pengajuan...</p>
+        }
+
+        <!-- Table Content -->
+        <div class="table-responsive">
+          <table class="data-table" aria-describedby="table-heading">
+            <thead>
+              <tr>
+                <th scope="col">No. Pengajuan</th>
+                <th scope="col">Tanggal Pengajuan</th>
+                <th scope="col">Nama Pemohon</th>
+                <th scope="col" class="text-right">Jumlah Pinjaman</th>
+                <th scope="col" class="text-center">Tenor</th>
+                <th scope="col" class="text-center">Status</th>
+                <th scope="col" class="text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Loading State -->
+              @if (isLoadingList()) {
+                <tr>
+                  <td colspan="7" class="state-cell">
+                    <div class="loading-state">
+                      <span class="spinner-navy"></span>
+                      <span>Memuat data pengajuan...</span>
+                    </div>
+                  </td>
+                </tr>
+              } @else if (listError()) {
+                <tr><td colspan="7" class="state-cell">
+                  <div class="empty-state" role="alert">
+                    <p>{{ listError() }}</p>
+                    <button type="button" class="btn btn-secondary" (click)="loadApplications()">Coba lagi</button>
+                  </div>
+                </td></tr>
+              } @else if (applications().length === 0) {
+                <!-- Empty State -->
+                <tr>
+                  <td colspan="7" class="state-cell">
+                    <div class="empty-state">
+                      <div class="empty-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                      </div>
+                      <p class="empty-title">Tidak ada data pengajuan</p>
+                      <p class="empty-desc">
+                        @if (searchTerm()) {
+                          Tidak ada pengajuan yang cocok dengan kata kunci "{{ searchTerm() }}".
+                        } @else {
+                          Belum ada pengajuan pinjaman yang tercatat. Silakan klik Tambah Pengajuan untuk membuat pengajuan baru.
+                        }
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                <!-- Data Rows -->
+                @for (app of applications(); track app.id) {
+                  <tr>
+                    <td class="font-mono font-semibold text-primary">
+                      {{ app.applicationNumber }}
+                    </td>
+                    <td class="text-muted">
+                      {{ formatDate(app.createdAt) }}
+                    </td>
+                    <td>
+                      <div class="cell-name-box">
+                        <span class="font-semibold">{{ app.fullName }}</span>
+                        <span class="text-xs text-muted">NIK: {{ app.nationalId }}</span>
+                      </div>
+                    </td>
+                    <td class="text-right font-semibold">
+                      {{ formatCurrency(app.amount) }}
+                    </td>
+                    <td class="text-center">
+                      <span class="tenor-badge">{{ app.tenorMonths }} Bulan</span>
+                    </td>
+                    <td class="text-center">
+                      <!-- Status "submitted" ditampilkan sebagai "Diajukan" -->
+                      <span class="badge badge-submitted">Diajukan</span>
+                    </td>
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        [id]="'btn-detail-' + app.id"
+                        class="btn-detail"
+                        (click)="openDetail(app)"
+                        [disabled]="isLoadingDetail()"
+                        title="Lihat rincian pengajuan"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span>Detail</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Section -->
+        <div class="pagination-footer">
+          <div class="pagination-info">
+            Menampilkan 
+            <strong>{{ applications().length ? (currentPage() - 1) * pageSize() + 1 : 0 }}</strong>
+            -
+            <strong>{{ applications().length ? (currentPage() - 1) * pageSize() + applications().length : 0 }}</strong>
+            dari <strong>{{ totalCount() }}</strong> data pengajuan
+          </div>
+
+          <div class="pagination-controls">
+            <button
+              type="button"
+              id="prev-page-btn"
+              class="btn-page"
+              [disabled]="currentPage() <= 1 || isLoadingList()"
+              (click)="goToPage(currentPage() - 1)"
+              aria-label="Halaman sebelumnya"
+            >
+              &laquo; Sebelumnya
+            </button>
+
+            @for (pageNum of getPageNumbers(); track pageNum) {
+              <button
+                type="button"
+                class="btn-page-number"
+                [class.active]="pageNum === currentPage()"
+                (click)="goToPage(pageNum)"
+              >
+                {{ pageNum }}
+              </button>
+            }
+
+            <button
+              type="button"
+              id="next-page-btn"
+              class="btn-page"
+              [disabled]="currentPage() >= totalPages() || isLoadingList()"
+              (click)="goToPage(currentPage() + 1)"
+              aria-label="Halaman selanjutnya"
+            >
+              Selanjutnya &raquo;
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+
+  <!-- Native dialog provides focus containment and restores focus to the trigger. -->
+  <dialog #createDialog id="create-loan-dialog" class="create-dialog" aria-labelledby="create-loan-title" aria-describedby="create-loan-description" (cancel)="onCreateCancel($event)" (close)="onCreateClosed()" (click)="onCreateBackdrop($event)">
+    <div class="create-dialog-shell">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <h2 id="create-loan-title" class="modal-title">Tambah Pengajuan</h2>
+          <p id="create-loan-description" class="card-subtitle">Lengkapi data calon debitur untuk membuat pengajuan baru.</p>
+        </div>
+        <button type="button" id="close-create-btn" class="modal-close-btn" aria-label="Tutup form pengajuan" (click)="closeCreate()" [disabled]="isSubmitting()">&times;</button>
+      </div>
+        <form [formGroup]="loanForm" (ngSubmit)="onSubmit()" class="loan-form" novalidate>
+          @if (formErrorMessage()) {
+            <div class="notification notification-error create-form-error" role="alert">{{ formErrorMessage() }}</div>
+          }
+          <div class="form-grid">
+            
+            <!-- Nama Lengkap -->
+            <div class="form-group">
+              <label for="fullName" class="form-label">
+                Nama Lengkap <span class="required">*</span>
+              </label>
+              <input
+                id="fullName"
+                autofocus
+                type="text"
+                formControlName="fullName"
+                placeholder="Contoh: Siti Rahmawati"
+                class="form-control"
+                [class.is-invalid]="fullNameCtrl?.invalid && (fullNameCtrl?.touched || fullNameCtrl?.dirty)"
+              />
+              @if (fullNameCtrl?.invalid && (fullNameCtrl?.touched || fullNameCtrl?.dirty)) {
+                <span class="field-error">
+                  @if (fullNameCtrl?.errors?.['server']) { {{ fullNameCtrl?.errors?.['server'] }} }
+                  @else if (fullNameCtrl?.errors?.['required']) { Nama lengkap wajib diisi. }
+                  @else if (fullNameCtrl?.errors?.['minlength']) { Minimal 3 karakter. }
+                  @else if (fullNameCtrl?.errors?.['maxlength']) { Maksimal 100 karakter. }
+                </span>
+              }
+            </div>
+
+            <!-- NIK -->
+            <div class="form-group">
+              <label for="nationalId" class="form-label">
+                Nomor Induk Kependudukan (NIK) <span class="required">*</span>
+              </label>
+              <input
+                id="nationalId"
+                type="text"
+                maxlength="16"
+                formControlName="nationalId"
+                placeholder="16 digit NIK sesuai KTP"
+                class="form-control"
+                [class.is-invalid]="nationalIdCtrl?.invalid && (nationalIdCtrl?.touched || nationalIdCtrl?.dirty)"
+              />
+              @if (nationalIdCtrl?.invalid && (nationalIdCtrl?.touched || nationalIdCtrl?.dirty)) {
+                <span class="field-error">
+                  @if (nationalIdCtrl?.errors?.['server']) { {{ nationalIdCtrl?.errors?.['server'] }} }
+                  @else if (nationalIdCtrl?.errors?.['required']) { NIK wajib diisi. }
+                  @else if (nationalIdCtrl?.errors?.['invalidNationalId']) { {{ nationalIdCtrl?.errors?.['invalidNationalId'] }} }
+                </span>
+              }
+            </div>
+
+            <!-- Nomor Telepon -->
+            <div class="form-group">
+              <label for="phone" class="form-label">
+                Nomor Telepon / WhatsApp <span class="required">*</span>
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                formControlName="phone"
+                placeholder="08123456789 atau +628123456789"
+                class="form-control"
+                [class.is-invalid]="phoneCtrl?.invalid && (phoneCtrl?.touched || phoneCtrl?.dirty)"
+              />
+              @if (phoneCtrl?.invalid && (phoneCtrl?.touched || phoneCtrl?.dirty)) {
+                <span class="field-error">
+                  @if (phoneCtrl?.errors?.['server']) { {{ phoneCtrl?.errors?.['server'] }} }
+                  @else if (phoneCtrl?.errors?.['required']) { Nomor telepon wajib diisi. }
+                  @else if (phoneCtrl?.errors?.['invalidPhone']) { {{ phoneCtrl?.errors?.['invalidPhone'] }} }
+                </span>
+              }
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label for="email" class="form-label">
+                Alamat Email <span class="required">*</span>
+              </label>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="nama@email.com"
+                class="form-control"
+                [class.is-invalid]="emailCtrl?.invalid && (emailCtrl?.touched || emailCtrl?.dirty)"
+              />
+              @if (emailCtrl?.invalid && (emailCtrl?.touched || emailCtrl?.dirty)) {
+                <span class="field-error">
+                  @if (emailCtrl?.errors?.['server']) { {{ emailCtrl?.errors?.['server'] }} }
+                  @else if (emailCtrl?.errors?.['required']) { Email wajib diisi. }
+                  @else if (emailCtrl?.errors?.['email']) { Format email tidak valid. }
+                </span>
+              }
+            </div>
+
+            <!-- Jumlah Pinjaman -->
+            <div class="form-group">
+              <label for="amount" class="form-label">
+                Jumlah Pinjaman (IDR) <span class="required">*</span>
+              </label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">Rp</span>
+                <input
+                  id="amount"
+                  type="number"
+                  min="1000000"
+                  max="100000000"
+                  step="500000"
+                  formControlName="amount"
+                  placeholder="1.000.000 – 100.000.000"
+                  class="form-control with-prefix"
+                  [class.is-invalid]="amountCtrl?.invalid && (amountCtrl?.touched || amountCtrl?.dirty)"
+                />
+              </div>
+              <span class="input-hint">Batas demo: Rp1.000.000 s/d Rp100.000.000</span>
+              @if (amountCtrl?.invalid && (amountCtrl?.touched || amountCtrl?.dirty)) {
+                <span class="field-error">
+                  @if (amountCtrl?.errors?.['server']) { {{ amountCtrl?.errors?.['server'] }} }
+                  @else if (amountCtrl?.errors?.['required']) { Jumlah pinjaman wajib diisi. }
+                  @else if (amountCtrl?.errors?.['min'] || amountCtrl?.errors?.['max']) {
+                    Jumlah pinjaman harus antara Rp1.000.000 s/d Rp100.000.000.
+                  }
+                </span>
+              }
+            </div>
+
+            <!-- Tenor -->
+            <div class="form-group">
+              <label for="tenorMonths" class="form-label">
+                Jangka Waktu (Tenor) <span class="required">*</span>
+              </label>
+              <select
+                id="tenorMonths"
+                formControlName="tenorMonths"
+                class="form-control form-select"
+                [class.is-invalid]="tenorCtrl?.invalid && (tenorCtrl?.touched || tenorCtrl?.dirty)"
+              >
+                @for (opt of tenorOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+              @if (tenorCtrl?.invalid && (tenorCtrl?.touched || tenorCtrl?.dirty)) {
+                <span class="field-error">{{ tenorCtrl?.errors?.['server'] || 'Pilihan tenor wajib ditentukan.' }}</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="paymentMethod" class="form-label">Metode Pembayaran</label>
+              <select id="paymentMethod" formControlName="paymentMethod" class="form-control">
+                <option value="transfer">Transfer bank</option>
+                <option value="cash">Tunai</option>
+              </select>
+            </div>
+
+            <!-- Tujuan Pinjaman (Full Width) -->
+            <div class="form-group full-width">
+              <label for="purpose" class="form-label">
+                Tujuan Pengajuan Pinjaman <span class="required">*</span>
+              </label>
+              <textarea
+                id="purpose"
+                rows="3"
+                formControlName="purpose"
+                placeholder="Jelaskan kebutuhan dan rencana penggunaan dana pinjaman (10 - 500 karakter)..."
+                class="form-control"
+                [class.is-invalid]="purposeCtrl?.invalid && (purposeCtrl?.touched || purposeCtrl?.dirty)"
+              ></textarea>
+              <div class="textarea-footer">
+                <span class="char-count">
+                  {{ purposeCtrl?.value?.length || 0 }} / 500 karakter
+                </span>
+                @if (purposeCtrl?.invalid && (purposeCtrl?.touched || purposeCtrl?.dirty)) {
+                  <span class="field-error">
+                    @if (purposeCtrl?.errors?.['server']) { {{ purposeCtrl?.errors?.['server'] }} }
+                  @else if (purposeCtrl?.errors?.['required']) { Tujuan pinjaman wajib diisi. }
+                    @else if (purposeCtrl?.errors?.['minlength']) { Minimal 10 karakter. }
+                    @else if (purposeCtrl?.errors?.['maxlength']) { Maksimal 500 karakter. }
+                  </span>
+                }
+              </div>
+            </div>
+
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="closeCreate()" [disabled]="isSubmitting()">Batal</button>
+            <button
+              type="submit"
+              id="submit-loan-btn"
+              class="btn btn-primary"
+              [disabled]="isSubmitting()"
+            >
+              @if (isSubmitting()) {
+                <span class="spinner" aria-hidden="true"></span>
+                <span>Menyimpan Pengajuan...</span>
+              } @else {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>Ajukan Pinjaman</span>
+              }
+            </button>
+          </div>
+        </form>
+    </div>
+  </dialog>
+
+  <!-- Dialog Modal Detail Pengajuan -->
+  @if (isDetailOpen() && selectedApplication()) {
+    <div
+      class="modal-backdrop"
+      (click)="closeDetail()"
+      role="presentation"
+    >
+      <div
+        class="modal-card"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <span class="badge badge-submitted">Diajukan</span>
+            <h3 id="modal-title" class="modal-title">Rincian Pengajuan Pinjaman</h3>
+            <span class="modal-subtitle font-mono">{{ selectedApplication()?.applicationNumber }}</span>
+          </div>
+          <button
+            type="button"
+            id="close-modal-btn"
+            class="modal-close-btn"
+            (click)="closeDetail()"
+            aria-label="Tutup dialog rincian"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="detail-grid">
+            
+            <div class="detail-item">
+              <span class="detail-label">Nomor Pengajuan</span>
+              <span class="detail-value font-mono font-semibold text-primary">{{ selectedApplication()?.applicationNumber }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Waktu Pengajuan</span>
+              <span class="detail-value">{{ formatDate(selectedApplication()!.createdAt) }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Status Verifikasi</span>
+              <span class="detail-value"><span class="badge badge-submitted">Diajukan</span></span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Nama Calon Debitur</span>
+              <span class="detail-value font-semibold">{{ selectedApplication()?.fullName }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Nomor Induk Kependudukan (NIK)</span>
+              <span class="detail-value font-mono">{{ selectedApplication()?.nationalId }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Nomor Telepon</span>
+              <span class="detail-value">{{ selectedApplication()?.phone }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Alamat Email</span>
+              <span class="detail-value">{{ selectedApplication()?.email }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Jumlah Pinjaman Disetujui Demo</span>
+              <span class="detail-value font-bold text-teal text-lg">
+                {{ formatCurrency(selectedApplication()!.amount) }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Jangka Waktu (Tenor)</span>
+              <span class="detail-value font-semibold">{{ selectedApplication()?.tenorMonths }} Bulan</span>
+            </div>
+
+            <div class="detail-item full-width">
+              <span class="detail-label">Tujuan Penggunaan Pinjaman</span>
+              <p class="detail-purpose-box">
+                {{ selectedApplication()?.purpose }}
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <span class="text-xs text-muted">Tekan <kbd>Esc</kbd> untuk menutup jendela ini</span>
+          <button
+            type="button"
+            id="modal-confirm-close-btn"
+            class="btn btn-secondary"
+            (click)="closeDetail()"
+          >
+            Tutup Rincian
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

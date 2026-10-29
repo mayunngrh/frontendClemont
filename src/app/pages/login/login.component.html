@@ -1,0 +1,132 @@
+<main class="login-wrapper">
+  <div class="login-card">
+    <div class="brand-section">
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">Clemont Loan Demo</h1>
+        <p class="brand-subtitle">Portal Staf Manajemen Pengajuan Pinjaman</p>
+      </div>
+      <span class="demo-badge">Demo Pelatihan</span>
+    </div>
+
+    <!-- Error Alert -->
+    @if (sessionMessage() && !errorMessage()) {
+          <div class="alert alert-error" role="alert">{{ sessionMessage() }}</div>
+        }
+        @if (errorMessage()) {
+      <div class="alert alert-error" role="alert" id="login-error-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+    }
+
+    <!-- Quick Credentials Hint for Trainees -->
+    <div class="hint-card">
+      <div class="hint-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
+        </svg>
+        <strong>Kredensial Demo:</strong>
+      </div>
+      <p>Email: <code>staff&#64;clemont.test</code></p>
+      <p>Password: <code>Belajar123!</code></p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form" novalidate>
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="login-email" class="form-label">
+          Alamat Email <span class="required">*</span>
+        </label>
+        <div class="input-container">
+          <input
+            id="login-email"
+            type="email"
+            formControlName="email"
+            placeholder="nama@clemont.test"
+            class="form-control"
+            [class.is-invalid]="emailCtrl?.invalid && (emailCtrl?.touched || emailCtrl?.dirty)"
+            autocomplete="email"
+          />
+        </div>
+        @if (emailCtrl?.invalid && (emailCtrl?.touched || emailCtrl?.dirty)) {
+          <div class="error-feedback">
+            @if (emailCtrl?.errors?.['required']) {
+              Email wajib diisi.
+            }
+            @if (emailCtrl?.errors?.['email']) {
+              Format email tidak valid.
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="login-password" class="form-label">
+          Kata Sandi <span class="required">*</span>
+        </label>
+        <div class="input-password-wrapper">
+          <input
+            id="login-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Masukkan kata sandi"
+            class="form-control"
+            [class.is-invalid]="passwordCtrl?.invalid && (passwordCtrl?.touched || passwordCtrl?.dirty)"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            id="toggle-password-btn"
+            class="toggle-pwd-btn"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="showPassword() ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
+          >
+            @if (showPassword()) {
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            } @else {
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            }
+          </button>
+        </div>
+        @if (passwordCtrl?.invalid && (passwordCtrl?.touched || passwordCtrl?.dirty)) {
+          <div class="error-feedback">
+            Kata sandi wajib diisi.
+          </div>
+        }
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        id="login-submit-btn"
+        class="btn btn-primary btn-block"
+        [disabled]="isLoading()"
+      >
+        @if (isLoading()) {
+          <span class="spinner" aria-hidden="true"></span>
+          <span>Memverifikasi...</span>
+        } @else {
+          <span>Masuk</span>
+        }
+      </button>
+    </form>
+  </div>
+</main>
